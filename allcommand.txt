@@ -1,0 +1,570 @@
+================================================================================
+  MEGABAZAR - FULL-STACK E-COMMERCE PLATFORM
+  All Commands Reference & Implementation Guide
+  Developed for: LogicThree Software Agency
+  Stack: Laravel (Backend) + React + Vite (Frontend) + MySQL + Bootstrap 5
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 1: PROJECT SCAFFOLDING COMMANDS
+────────────────────────────────────────────────────────────────────────────────
+
+1. CREATE LARAVEL BACKEND
+   Command:  cd E:\xampp\htdocs\MegaBazar && composer create-project laravel/laravel backend --prefer-dist
+   Location: Run inside /MegaBazar/
+   Why:      Creates a fresh Laravel application using Composer package manager
+             in a sub-directory called "backend". "--prefer-dist" downloads
+             zip archives instead of cloning from source (faster).
+   Functionality Applied: Scaffolds the full Laravel MVC project structure —
+             app/, routes/, database/, config/, resources/, vendor/ — which
+             forms the API backbone of MegaBazar (authentication, products,
+             orders, payments, real-time chat).
+   Result:   /MegaBazar/backend/ — complete Laravel project ready to configure.
+
+2. CREATE REACT + VITE FRONTEND
+   Command:  cd E:\xampp\htdocs\MegaBazar && npm create vite@latest frontend -- --template react
+   Location: Run inside /MegaBazar/
+   Why:      Scaffolds a React application using Vite as the build tool.
+             Vite is significantly faster than Create React App because it uses
+             native ES modules during development (no bundling on every save).
+             "--template react" pre-configures JSX support and HMR.
+   Functionality Applied: Creates the entire customer-facing storefront and
+             admin dashboard SPA (Single Page Application) for MegaBazar.
+   Result:   /MegaBazar/frontend/ — React project with src/, index.html,
+             vite.config.js ready for development.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 2: BACKEND DEPENDENCY COMMANDS
+────────────────────────────────────────────────────────────────────────────────
+  Note: All backend commands must be run from /MegaBazar/backend/
+
+3. INSTALL LARAVEL SANCTUM (API Token Authentication)
+   Command:  cd E:\xampp\htdocs\MegaBazar\backend && composer require laravel/sanctum
+   Location: /MegaBazar/backend/
+   Why:      Sanctum provides lightweight SPA/API token authentication.
+             It issues Bearer tokens so React can authenticate every API call
+             (login, register, cart, orders) without session cookies.
+   Functionality Applied: Protects all customer routes (/api/cart, /api/orders,
+             /api/wishlist, /api/profile) and admin routes (/api/admin/*).
+             Every request header carries: Authorization: Bearer {token}.
+   Result:   Token-based auth system; personal_access_tokens table migration added.
+
+4. INSTALL LARAVEL REVERB (WebSocket Server for Live Chat)
+   Command:  cd E:\xampp\htdocs\MegaBazar\backend && composer require laravel/reverb
+   Location: /MegaBazar/backend/
+   Why:      Laravel Reverb is a first-party WebSocket server that powers
+             real-time broadcasting. Required for the live chat feature so that
+             messages appear instantly without page refresh.
+   Functionality Applied: Powers the Chat Widget (customer) and Chat Inbox
+             (admin). When a customer sends a message, the NewChatMessage event
+             broadcasts to the "chat.{roomId}" and "admin.chat" channels.
+   Result:   WebSocket server at ws://localhost:8080; config/reverb.php created.
+
+5. INSTALL INTERVENTION IMAGE (Image Processing)
+   Command:  cd E:\xampp\htdocs\MegaBazar\backend && composer require intervention/image
+   Location: /MegaBazar/backend/
+   Why:      Provides server-side image manipulation (resize, crop, optimize)
+             for product thumbnails and user avatar uploads.
+   Functionality Applied: Used in AdminProductController and AuthController
+             when saving uploaded product images and user profile photos.
+   Result:   Image processing utilities available across all upload controllers.
+
+6. PUBLISH SANCTUM CONFIG AND MIGRATIONS
+   Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+   Location: /MegaBazar/backend/
+   Why:      Copies Sanctum's default configuration file and the
+             personal_access_tokens migration into the project so they can
+             be customized and run.
+   Functionality Applied: The personal_access_tokens table stores every issued
+             API token (one per device/session). Token expiration and revocation
+             are configured here.
+   Result:   config/sanctum.php and database migration for tokens created.
+
+7. GENERATE APPLICATION ENCRYPTION KEY
+   Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan key:generate
+   Location: /MegaBazar/backend/
+   Why:      Sets a unique APP_KEY in .env. Laravel uses this key for all
+             encryption (sessions, signed URLs, encrypted cookies, password
+             hashing). Without it, the app cannot securely run.
+   Functionality Applied: Ensures all Sanctum tokens, session data, and
+             encrypted fields in MegaBazar are cryptographically secure.
+   Result:   APP_KEY=base64:... written to .env file automatically.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 3: DATABASE COMMANDS
+────────────────────────────────────────────────────────────────────────────────
+  Note: First create the database manually in phpMyAdmin or MySQL:
+        CREATE DATABASE megabazar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+8. RUN ALL DATABASE MIGRATIONS
+   Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan migrate
+   Location: /MegaBazar/backend/
+   Why:      Executes all PHP migration files in database/migrations/ in
+             chronological order, creating every table in the MySQL database.
+   Functionality Applied: Creates 15 tables covering the full e-commerce schema:
+             users (RBAC roles), categories (hierarchical parent/child),
+             products + product_images + product_variants + product_attributes,
+             addresses, coupons, orders + order_items,
+             bkash_transactions (sandbox payment log),
+             carts + cart_items, wishlists,
+             reviews + review_media, comments,
+             chat_rooms + chat_messages + support_tickets + canned_responses,
+             settings (key-value store), personal_access_tokens, cache, jobs.
+   Result:   All tables created in MySQL "megabazar" database.
+
+9. SEED THE DATABASE WITH DEMO DATA
+   Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan db:seed
+   Location: /MegaBazar/backend/
+   Why:      Runs DatabaseSeeder.php to populate the database with initial data
+             needed for a working demo without manual data entry.
+   Functionality Applied: Seeds the following:
+             - Admin accounts (Super Admin, Order Manager, Customer demo)
+             - 8 top-level categories (Electronics, Fashion, Home, Sports...)
+             - 4 sub-categories (Smartphones, Laptops, Men's, Women's)
+             - 4 sample products with prices and stock
+             - System settings (shipping charge ৳60, free shipping above ৳2000)
+             - 3 canned chat responses for admin shortcuts
+   Result:   Login with admin@megabazar.com / password immediately after seeding.
+
+10. FRESH MIGRATION + SEED (Reset Everything)
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan migrate:fresh --seed
+    Location: /MegaBazar/backend/
+    Why:      Drops ALL tables, re-runs all migrations from scratch, then seeds.
+              Used during development to get a clean database state.
+    Functionality Applied: Full database reset — useful when migration files
+              are changed or new seeders are added.
+    WARNING:  This PERMANENTLY DELETES all data. NEVER run on production.
+
+11. CREATE PUBLIC STORAGE SYMLINK (for file serving)
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan storage:link
+    Location: /MegaBazar/backend/
+    Why:      Creates a symbolic link: public/storage → storage/app/public
+              so that uploaded files are accessible via HTTP URL.
+    Functionality Applied: Every product image, review photo, and user avatar
+              uploaded through the API is stored in storage/app/public/ and
+              served at: http://localhost/MegaBazar/backend/public/storage/...
+              The React frontend uses VITE_STORAGE_URL to build these URLs.
+    Result:   File uploads accessible via URL without moving files manually.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 4: FRONTEND DEPENDENCY COMMANDS
+────────────────────────────────────────────────────────────────────────────────
+  Note: All frontend commands must be run from /MegaBazar/frontend/
+
+12. INSTALL BASE DEPENDENCIES
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm install
+    Location: /MegaBazar/frontend/
+    Why:      Installs React, ReactDOM, Vite plugin, and all other packages
+              listed in package.json into node_modules/.
+    Functionality Applied: Foundation for running the entire React SPA.
+    Result:   node_modules/ populated; app can start with npm run dev.
+
+13. INSTALL BOOTSTRAP 5 (CSS Framework)
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm install bootstrap@5
+    Location: /MegaBazar/frontend/
+    Why:      Bootstrap 5 provides a responsive 12-column grid system, pre-built
+              UI components (cards, modals, tables, forms, badges, dropdowns,
+              navbars, pagination) and utility classes used throughout MegaBazar.
+    Functionality Applied: Used across ALL pages — product cards, admin tables,
+              checkout form, order tracking progress bar, admin sidebar navigation,
+              modals for product/coupon creation, responsive grid layouts.
+    Result:   Imported in main.jsx: import 'bootstrap/dist/css/bootstrap.min.css'
+
+14. INSTALL BOOTSTRAP ICONS
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm install bootstrap-icons
+    Location: /MegaBazar/frontend/
+    Why:      Provides 1900+ SVG icon set (bi-cart3, bi-heart, bi-search,
+              bi-person, bi-speedometer2, bi-bag-check, etc.) used throughout
+              the UI without relying on external CDN.
+    Functionality Applied: Cart icon with badge count in Navbar, wishlist heart
+              icon on product cards, admin sidebar menu icons, order status icons,
+              chat widget icons, profile page icons.
+    Result:   Imported in main.jsx: import 'bootstrap-icons/font/bootstrap-icons.css'
+              Used as: <i className="bi bi-cart3" />
+
+15. INSTALL AXIOS (HTTP Client for API calls)
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm install axios
+    Location: /MegaBazar/frontend/
+    Why:      Axios is a promise-based HTTP client that handles all communication
+              between React and the Laravel API. It supports interceptors for
+              automatically injecting auth tokens and handling 401 errors.
+    Functionality Applied: Every API call in MegaBazar uses the configured
+              Axios instance (src/services/api.js):
+              - Request interceptor: attaches Authorization: Bearer {token}
+              - Response interceptor: redirects to /login on 401 Unauthorized
+              - Used in all pages and stores for GET/POST/PUT/DELETE requests.
+    Result:   src/services/api.js — centralized API service used everywhere.
+
+16. INSTALL REACT ROUTER DOM v6 (Client-Side Routing)
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm install react-router-dom@6
+    Location: /MegaBazar/frontend/
+    Why:      Provides SPA navigation without page reloads. React Router v6
+              uses nested routes, BrowserRouter, NavLink active states, and
+              useNavigate/useParams hooks.
+    Functionality Applied: All page routing in App.jsx:
+              - Public routes: /, /products, /products/:slug, /cart
+              - Protected routes (requires login): /checkout, /orders, /profile, /wishlist
+              - Admin routes (requires admin role): /admin, /admin/products, etc.
+              - ProtectedRoute and AdminRoute guard components.
+    Result:   Full SPA with 20+ routes; back-button and URL sharing work correctly.
+
+17. INSTALL REACT TOASTIFY (Notification System)
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm install react-toastify
+    Location: /MegaBazar/frontend/
+    Why:      Provides non-blocking pop-up notifications (toasts) for user
+              feedback without interrupting the shopping flow.
+    Functionality Applied: Used throughout for:
+              - "Added to cart!" (success) when clicking Add to Cart
+              - "Payment successful!" after bKash OTP verification
+              - "Order placed successfully!" after checkout
+              - "Review submitted for approval" after writing a review
+              - Error messages for invalid coupon, failed payments, 403 errors
+    Result:   <ToastContainer /> in App.jsx; toast.success/error/info in 15+ components.
+
+18. INSTALL ZUSTAND (Lightweight Global State Management)
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm install zustand
+    Location: /MegaBazar/frontend/
+    Why:      Zustand is a minimal state manager (no boilerplate like Redux).
+              It persists user auth, cart, and wishlist state across all
+              components without prop-drilling.
+    Functionality Applied: Three stores created:
+              - useAuthStore: user object, token, login(), register(), logout()
+                Persists to localStorage so session survives page refresh.
+              - useCartStore: items array, subtotal, count, addToCart(), removeItem()
+                Cart count shown in Navbar badge updates everywhere instantly.
+              - useWishlistStore: items array, toggle(), isWishlisted()
+                Wishlist heart on product cards reflects real-time state.
+    Result:   Global state available in any component via: const {user} = useAuthStore()
+
+19. INSTALL PUSHER-JS (WebSocket Client)
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm install pusher-js
+    Location: /MegaBazar/frontend/
+    Why:      Pusher-js is the JavaScript WebSocket client library that connects
+              to Laravel Reverb's WebSocket server. Used for receiving real-time
+              chat messages from the backend broadcast events.
+    Functionality Applied: Enables live chat — when admin sends a reply from
+              the Chat Inbox, it broadcasts via Reverb and the customer's
+              ChatWidget receives it instantly without polling the API.
+    Result:   Can subscribe to channels: chat.{roomId} and admin.chat.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 5: DEVELOPMENT & BUILD COMMANDS
+────────────────────────────────────────────────────────────────────────────────
+
+20. START REACT VITE DEVELOPMENT SERVER
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm run dev
+    Location: /MegaBazar/frontend/
+    Why:      Starts the Vite dev server with Hot Module Replacement (HMR).
+              Any change to .jsx or .css files updates the browser instantly
+              without a full page reload, preserving component state.
+    Functionality Applied: Used during all frontend development of MegaBazar
+              — 20 pages, 15 components, 3 stores were all developed with HMR.
+    Result:   Frontend live at http://localhost:5173
+              API proxy configured in vite.config.js → http://localhost/MegaBazar/backend/public
+
+21. BUILD REACT FOR PRODUCTION
+    Command:  cd E:\xampp\htdocs\MegaBazar\frontend && npm run build
+    Location: /MegaBazar/frontend/
+    Why:      Compiles, transpiles, and minifies all React code into static
+              HTML/CSS/JS files optimized for production deployment.
+              Code splitting defined in vite.config.js reduces initial load.
+    Functionality Applied: Produces optimized bundles:
+              - vendor chunk: react + react-dom + react-router-dom (cached by browser)
+              - ui chunk: bootstrap (cached separately)
+              - Individual page chunks (lazy-loadable)
+    Result:   /MegaBazar/frontend/dist/ — static files ready for deployment.
+
+22. START LARAVEL REVERB WEBSOCKET SERVER
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan reverb:start
+    Location: /MegaBazar/backend/
+    Why:      Starts the WebSocket server that handles persistent connections
+              for the live chat feature. Must run alongside the web server.
+    Functionality Applied: Listens on ws://localhost:8080 for connections.
+              When a customer or admin sends a chat message, NewChatMessage
+              event broadcasts to all subscribers of that chat channel,
+              delivering the message in real-time.
+    Result:   WebSocket server running; real-time chat functional.
+
+23. START LARAVEL QUEUE WORKER (Email/SMS Notifications)
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan queue:work
+    Location: /MegaBazar/backend/
+    Why:      Processes queued background jobs so that order confirmation emails,
+              payment success alerts, and shipping notifications are sent
+              without slowing down the HTTP response.
+    Functionality Applied: Handles automated notification system:
+              - Order confirmation email after checkout
+              - Payment success email after bKash verification
+              - Shipping update notification when admin marks order as shipped
+    Result:   Background jobs from the database queue processed in real-time.
+
+24. START LARAVEL DEVELOPMENT SERVER (without XAMPP)
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan serve
+    Location: /MegaBazar/backend/
+    Why:      Starts PHP's built-in web server for the Laravel API.
+              Alternative to Apache/XAMPP for standalone development.
+    Functionality Applied: Serves all API endpoints at http://127.0.0.1:8000/api
+              Note: With XAMPP running, access via Apache is preferred:
+              http://localhost/MegaBazar/backend/public/api
+    Result:   API available at http://127.0.0.1:8000
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 6: LARAVEL ARTISAN UTILITY COMMANDS
+────────────────────────────────────────────────────────────────────────────────
+
+25. CLEAR ALL CACHES
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan optimize:clear
+    Location: /MegaBazar/backend/
+    Why:      Clears config, route, view, and application caches.
+              Must run after editing .env or any config file, otherwise
+              Laravel serves stale cached values.
+    Functionality Applied: Run whenever DB_*, SANCTUM_*, REVERB_* or
+              APP_URL values change in .env to force config reload.
+    Result:   All caches cleared; fresh configuration loaded on next request.
+
+26. OPTIMIZE FOR PRODUCTION (Cache everything)
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan optimize
+    Location: /MegaBazar/backend/
+    Why:      Pre-compiles and caches config files, route maps, and Blade
+              views so Laravel doesn't re-parse them on every HTTP request.
+              Significantly reduces response time in production.
+    Functionality Applied: Caches all 75+ API routes into a single file;
+              caches all config arrays; pre-compiles Blade templates.
+    Result:   bootstrap/cache/ populated; faster API response times.
+
+27. LIST ALL API ROUTES (Debugging)
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan route:list --path=api
+    Location: /MegaBazar/backend/
+    Why:      Displays a full table of all registered routes showing HTTP method,
+              URI pattern, middleware, and controller@method for every endpoint.
+    Functionality Applied: Used to verify all 75+ MegaBazar API endpoints are
+              correctly registered with proper middleware (auth:sanctum, admin).
+    Result:   Table output showing every route. Useful for debugging 404 errors.
+
+28. REGENERATE COMPOSER AUTOLOADER
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && composer dump-autoload
+    Location: /MegaBazar/backend/
+    Why:      Regenerates PHP's class autoloading map after adding new PHP files.
+              Without this, new Model, Controller, or Event classes may not be found.
+    Functionality Applied: Required after adding new Eloquent models or classes
+              to ensure they are discoverable by the Laravel framework.
+    Result:   vendor/composer/autoload_classmap.php rebuilt with all classes.
+
+29. PUBLISH REVERB CONFIG
+    Command:  cd E:\xampp\htdocs\MegaBazar\backend && php artisan reverb:install
+    Location: /MegaBazar/backend/
+    Why:      Publishes the Reverb WebSocket server configuration file and
+              sets up the REVERB_* environment variables in .env automatically.
+    Functionality Applied: Configures the WebSocket server credentials
+              (REVERB_APP_ID, REVERB_APP_KEY, REVERB_APP_SECRET) used by both
+              the Laravel broadcast events and the React pusher-js client.
+    Result:   config/reverb.php created; .env updated with Reverb credentials.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 7: COMPLETE FIRST-TIME SETUP PROCEDURE
+────────────────────────────────────────────────────────────────────────────────
+
+  Prerequisites: XAMPP running (Apache + MySQL), PHP 8.2+, Composer 2+,
+                 Node.js 18+, npm 9+
+
+  STEP 1 — Create MySQL Database
+    Open phpMyAdmin at http://localhost/phpmyadmin
+    Run: CREATE DATABASE megabazar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+  STEP 2 — Backend Setup
+    cd E:\xampp\htdocs\MegaBazar\backend
+    php artisan key:generate
+    php artisan migrate --seed
+    php artisan storage:link
+
+  STEP 3 — Frontend Setup
+    cd E:\xampp\htdocs\MegaBazar\frontend
+    npm install
+
+  STEP 4 — Start Development Servers
+    Terminal 1 (WebSockets):  cd backend && php artisan reverb:start
+    Terminal 2 (Frontend):    cd frontend && npm run dev
+
+  STEP 5 — Access the Application
+    Frontend (Customer):   http://localhost:5173
+    Admin Dashboard:       http://localhost:5173/admin
+    Laravel API:           http://localhost/MegaBazar/backend/public/api
+
+  LOGIN CREDENTIALS (created by seeder):
+    Super Admin:    admin@megabazar.com    / password
+    Order Manager:  manager@megabazar.com  / password
+    Customer Demo:  customer@megabazar.com / password
+
+  bKASH SANDBOX TESTING:
+    Number: Any valid 11-digit Bangladesh number (e.g. 01711111111)
+    OTP:    123456  (always, in sandbox mode)
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 8: COMPLETE PROJECT FILE STRUCTURE
+────────────────────────────────────────────────────────────────────────────────
+
+MegaBazar/
+├── allcommand.txt                   ← THIS FILE — commands reference
+├── backend/                         ← Laravel 11 REST API
+│   ├── app/
+│   │   ├── Events/
+│   │   │   └── NewChatMessage.php   ← Broadcasts real-time chat via Reverb
+│   │   ├── Http/
+│   │   │   ├── Controllers/
+│   │   │   │   ├── Api/             ← 9 customer-facing API controllers
+│   │   │   │   │   ├── AuthController.php       (register, login, logout, profile)
+│   │   │   │   │   ├── ProductController.php    (list, show, search, featured)
+│   │   │   │   │   ├── CartController.php       (add, update, remove, clear)
+│   │   │   │   │   ├── OrderController.php      (create, list, coupon validation)
+│   │   │   │   │   ├── BkashController.php      (initiate, OTP verify, transactions)
+│   │   │   │   │   ├── WishlistController.php   (toggle, list)
+│   │   │   │   │   ├── ReviewController.php     (submit review, submit comment)
+│   │   │   │   │   ├── ChatController.php       (get room, send, create ticket)
+│   │   │   │   │   └── AddressController.php    (CRUD address book)
+│   │   │   │   └── Admin/           ← 9 admin management controllers
+│   │   │   │       ├── DashboardController.php  (stats, charts, CSV export)
+│   │   │   │       ├── ProductController.php    (CRUD + image upload + variants)
+│   │   │   │       ├── OrderController.php      (list, status update, invoice)
+│   │   │   │       ├── CustomerController.php   (list, LTV, role, status)
+│   │   │   │       ├── CouponController.php     (CRUD coupon codes)
+│   │   │   │       ├── ReviewController.php     (approve/reject reviews & Q&A)
+│   │   │   │       ├── ChatController.php       (inbox, reply, canned responses)
+│   │   │   │       ├── CategoryController.php   (CRUD categories)
+│   │   │   │       └── SettingController.php    (get/set key-value settings)
+│   │   │   └── Middleware/
+│   │   │       └── AdminMiddleware.php          (blocks non-admin API access)
+│   │   └── Models/ (22 Eloquent models)
+│   │       ├── User.php             (RBAC: customer/admin/order_manager/super_admin)
+│   │       ├── Category.php         (hierarchical: parent → children)
+│   │       ├── Product.php          (SoftDeletes, low-stock detection, rating)
+│   │       ├── ProductImage.php     (multiple images per product)
+│   │       ├── ProductVariant.php   (size/color with own stock & price)
+│   │       ├── ProductAttribute.php (key-value specifications)
+│   │       ├── Address.php          (multiple addresses per user)
+│   │       ├── Coupon.php           (percentage/fixed, usage limits, expiry)
+│   │       ├── Order.php            (auto order_number: MB-XXXXX)
+│   │       ├── OrderItem.php        (snapshot of product at time of purchase)
+│   │       ├── BkashTransaction.php (sandbox payment audit log)
+│   │       ├── Cart.php             (linked to user)
+│   │       ├── CartItem.php         (product + variant + quantity)
+│   │       ├── Wishlist.php         (user ↔ product, unique constraint)
+│   │       ├── Review.php           (rating 1-5, verified buyer badge)
+│   │       ├── ReviewMedia.php      (images/videos attached to reviews)
+│   │       ├── Comment.php          (Q&A with replies via parent_id)
+│   │       ├── ChatRoom.php         (one per user, status: open/closed)
+│   │       ├── ChatMessage.php      (user/admin/bot sender types)
+│   │       ├── SupportTicket.php    (offline ticket with auto TKT-XXXXX ID)
+│   │       ├── CannedResponse.php   (admin chat shortcut macros)
+│   │       └── Setting.php          (key-value store with 1hr cache)
+│   ├── database/
+│   │   ├── migrations/ (15 files)
+│   │   │   ├── ..._create_users_table.php
+│   │   │   ├── ..._create_categories_table.php
+│   │   │   ├── ..._create_products_table.php     (+ images, variants, attributes)
+│   │   │   ├── ..._create_addresses_table.php
+│   │   │   ├── ..._create_coupons_table.php
+│   │   │   ├── ..._create_orders_table.php       (+ order_items)
+│   │   │   ├── ..._create_bkash_transactions_table.php
+│   │   │   ├── ..._create_cart_table.php         (+ cart_items)
+│   │   │   ├── ..._create_wishlists_table.php
+│   │   │   ├── ..._create_reviews_table.php      (+ review_media, comments)
+│   │   │   ├── ..._create_chat_table.php         (+ messages, tickets, canned)
+│   │   │   └── ..._create_settings_table.php
+│   │   └── seeders/DatabaseSeeder.php
+│   ├── routes/api.php               ← 75+ API endpoints (public + auth + admin)
+│   ├── config/cors.php              ← CORS allows http://localhost:5173
+│   ├── bootstrap/app.php            ← registers api routes + admin middleware
+│   └── .env                         ← MySQL, Sanctum, Reverb, bKash config
+│
+└── frontend/                        ← React 18 + Vite SPA
+    ├── src/
+    │   ├── services/
+    │   │   └── api.js               ← Axios instance + auth interceptors
+    │   ├── store/
+    │   │   ├── useAuthStore.js      ← Zustand: login/register/logout + localStorage
+    │   │   ├── useCartStore.js      ← Zustand: cart items, subtotal, count
+    │   │   └── useWishlistStore.js  ← Zustand: wishlist toggle + isWishlisted()
+    │   ├── components/
+    │   │   ├── layout/
+    │   │   │   ├── Navbar.jsx       ← Sticky nav, search suggest, cart badge, dropdown
+    │   │   │   └── Footer.jsx       ← Links, payment badges, social icons
+    │   │   └── common/
+    │   │       ├── ProductCard.jsx  ← Add to cart, wishlist, sale %, low-stock badge
+    │   │       ├── StarRating.jsx   ← Interactive (writable) + readonly star display
+    │   │       ├── ChatWidget.jsx   ← Floating chat: bot replies + order reference
+    │   │       └── LoadingSpinner.jsx
+    │   ├── pages/
+    │   │   ├── auth/
+    │   │   │   ├── Login.jsx        ← Email/password + demo credentials panel
+    │   │   │   └── Register.jsx     ← Full registration with validation errors
+    │   │   ├── customer/
+    │   │   │   ├── Home.jsx         ← Hero banner, category grid, featured products
+    │   │   │   ├── Products.jsx     ← Filter/sort sidebar + paginated product grid
+    │   │   │   ├── ProductDetail.jsx ← Gallery, variant selector, reviews, Q&A tabs
+    │   │   │   ├── Cart.jsx         ← Quantity update, free shipping progress bar
+    │   │   │   ├── Checkout.jsx     ← Address, coupon, bKash OTP flow, COD option
+    │   │   │   ├── OrderSuccess.jsx ← Confirmation with order summary
+    │   │   │   ├── Orders.jsx       ← Paginated order list with status badges
+    │   │   │   ├── OrderDetail.jsx  ← Visual tracking progress + bKash TRX info
+    │   │   │   ├── Wishlist.jsx     ← Add to cart or remove from wishlist
+    │   │   │   └── Profile.jsx      ← Profile, password change, address book tabs
+    │   │   └── admin/
+    │   │       ├── AdminLayout.jsx  ← Fixed sidebar + responsive mobile toggle
+    │   │       ├── AdminDashboard.jsx ← Stats cards, bar chart, recent orders, bKash log
+    │   │       ├── AdminProducts.jsx  ← Table CRUD + image upload modal
+    │   │       ├── AdminCategories.jsx ← Hierarchical category management
+    │   │       ├── AdminOrders.jsx    ← Filterable table + inline status updater
+    │   │       ├── AdminCustomers.jsx ← LTV metrics + role assignment + status toggle
+    │   │       ├── AdminCoupons.jsx   ← Create/edit percentage or fixed coupons
+    │   │       ├── AdminReviews.jsx   ← Approve/reject reviews and Q&A comments
+    │   │       ├── AdminChat.jsx      ← Split inbox + chat + canned response shortcuts
+    │   │       └── AdminSettings.jsx  ← General, shipping/tax, bKash gateway config
+    │   ├── App.jsx                  ← Router: public + ProtectedRoute + AdminRoute
+    │   └── index.css                ← Bootstrap 5 overrides, MegaBazar pink theme
+    ├── .env                         ← VITE_API_URL, VITE_STORAGE_URL, VITE_REVERB_*
+    └── vite.config.js               ← Proxy /api, code splitting chunks
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 9: SEO & PERFORMANCE OPTIMIZATIONS
+────────────────────────────────────────────────────────────────────────────────
+
+SEO OPTIMIZATIONS:
+  - Dynamic document.title on every page load (e.g., "iPhone 15 - MegaBazar")
+  - URL slugs for all products/categories (SEO-friendly: /products/iphone-15-abc1)
+  - Breadcrumb navigation on Product, Products, and OrderDetail pages
+  - Alt text attributes on ALL product images
+  - Semantic HTML: <nav>, <main>, <footer>, <section>, <article> elements
+  - Short descriptions for meta snippet previews
+  - Hierarchical category structure for deep linking
+
+PERFORMANCE OPTIMIZATIONS:
+  Backend:
+  - Eager loading (->with()) in ALL controllers — prevents N+1 query problem
+  - Setting::get() caches key-value settings for 1 hour (Laravel Cache)
+  - SoftDeletes on Products — recoverable deletion without orphan records
+  - Database foreign key constraints create automatic MySQL indexes
+  - Queue workers for async email sending (non-blocking HTTP responses)
+
+  Frontend:
+  - Vite code splitting: vendor chunk (React/Router) + ui chunk (Bootstrap)
+    Browser caches these separately; only app code re-downloads on update
+  - Zustand state in memory — no redundant API calls on re-renders
+  - Debounced search input (300ms delay) — reduces API calls while typing
+  - React lazy loading images: loading="lazy" on all product images
+  - Bootstrap loaded from npm — no CDN latency or availability dependency
+  - Axios interceptor handles 401 globally — no per-component auth checks
+
+SECURITY:
+  - Laravel Sanctum Bearer token (no session cookies, CSRF-safe for SPA)
+  - CORS restricted to localhost:5173 only (config/cors.php)
+  - AdminMiddleware blocks non-admin users from /api/admin/* with 403
+  - Input validation on ALL controllers (Laravel validate() method)
+  - SoftDeletes on products — audit trail preserved
+  - bcrypt password hashing (BCRYPT_ROUNDS=12 in .env)
+  - bKash OTP verification step before payment completion
+  - Cart/Address ownership checks (user_id comparison) to prevent IDOR attacks
+
+================================================================================
+  END OF ALLCOMMAND.TXT
+  MegaBazar | LogicThree Software Agency
+  Total: 29 Commands | 75+ API Routes | 22 Models | 20 Pages
+================================================================================
